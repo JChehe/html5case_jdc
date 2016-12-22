@@ -1,0 +1,22 @@
+{
+  "name": "generateJDH5_koa2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "ljc",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^0.15.3",
+    "fs-extra": "^1.0.0",
+    "hexo-util": "^0.6.0",
+    "koa": "^2.0.0-alpha.7",
+    "koa-router": "^7.0.1",
+    "leancloud-storage": "^1.5.3",
+    "md5": "^2.2.1",
+    "moment": "^2.17.1"
+  }
+}
