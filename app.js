@@ -1,4 +1,3 @@
-const fs = require('fs-extra')
 const Koa = require('koa')
 const app = new Koa()
 const router = require('./router')
