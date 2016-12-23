@@ -7,7 +7,7 @@ module.exports = {
 	},
 	// leanCloud
 	leanCloud: {
-		appId: '-gzGzoHsz',
+		appId: '',
 		appKey: ''
 	}
 }

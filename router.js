@@ -24,6 +24,7 @@ AV.init({
 })
 
 let Case = AV.Object.extend('Case')
+let caseQuery = new AV.Query('Case')
 
 router.get('/', (ctx) => {
 	ctx.response.body = 'hello world\n' // or ctx.body
@@ -40,47 +41,29 @@ router.get('/h5', (ctx) => {
 			if(status === 200) {
 
 				let dataArr = eval(data)
-
 				let cases = []
 				let tran_urls = []
 
 				for(let i = 0, len = dataArr.length; i < len; i++) {
 					let item = dataArr[i],
 						title = item.title,
-						bd_sign = getBaiduTranSign({bd_appId, title, bd_salt, bd_secret}),
-						typeStr = 'tags:';
-
+						bd_sign = getBaiduTranSign({bd_appId, title, bd_salt, bd_secret});
+						
 					tran_urls.push(`${BAIDUTRAN_URL}${encodeURI(title)}&from=zh&to=en&appid=${bd_appId}&salt=${bd_salt}&sign=${bd_sign}`)
+				}
 
-					/*if(i === 3) {
-						break;
-					}*/
-				
-				// console.log(tran_urls)
+				let req_urls = tran_urls.map(function(url) {
+					return axios.get(url)
+				})
 
-				let req_urls = []
+				axios.all(req_urls)
+					.then(axios.spread(function(...trans_result) {
+						for(let i = 0; i < trans_result.length; i++) {
+							let tranRes = trans_result[i],
+								typeStr = 'tags:';
+							let item = dataArr[i],
+								title = item.title;
 
-				/*for(let i = 0; i < tran_urls.length; i++) {
-					let funcBody = `(function () {
-						return axios.get(${req_urls[i]})
-					})()`
-					req_urls.push(new Function(funcBody))
-				}*/
-
-				// console.log(req_urls)
-
-
-			/*	axios.all(req_urls)
-					.then(axios.spread(function (acct, perms) {
-						console.log('acct', acct)
-						console.log('perms', perms)
-					}))
-					.catch((error) =>{
-						console.log('axios Concurrency error')
-					})*/
-
-					axios.get(`${BAIDUTRAN_URL}${encodeURI(title)}&from=zh&to=en&appid=${bd_appId}&salt=${bd_salt}&sign=${bd_sign}`)
-						.then((tranRes) => {
 							if(tranRes.status !== 200) {
 								return new Error('请求百度翻译失败')
 							}
@@ -112,8 +95,13 @@ router.get('/h5', (ctx) => {
 
 							let caseItem = new Case()
 
+							// 如果直接用原来的_id，会占用LeadCloud上的 ObjectId，这样会导致通过 id 查询时报错： Object not found
 							for( let key in item ) {
-								caseItem.set(key, item[key])
+								if(key !== '_id') {
+									caseItem.set(key, item[key])
+								} else {
+									caseItem.set('ori_id', item['_id'])
+								}
 							}
 
 							caseItem.set('trans_filename', trans_filename)
@@ -121,27 +109,41 @@ router.get('/h5', (ctx) => {
 							caseItem.set('final_filename', final_filename)
 							caseItem.set('file_content', content)
 
-							caseItem.save()
-								.then((saveRes) => {
-									console.log('Object id is: ' ,saveRes.id)
+							caseQuery.equalTo('ori_id', item['_id']).find()
+								.then((avCase) => {
+									// 不存在，是 []
+									// console.log(avCase)
+									if(avCase.length === 0) {
+										caseItem.save()
+											.then((saveRes) => {
+												console.log('Object id is: ' ,saveRes.id)
+											})
+											.catch((error) => {
+												console.log(error)
+											})
+									}
 								})
 								.catch((error) => {
 									console.log(error)
 								})
 
+							
+
 							fs.outputFile(final_filename, content, (err) => {
 								if(err) return err;
 								console.log(`create file: ${content}`)
 							})
-						})
-						.catch((error) => {
-							console.log('translate error')
-						})
-					if(i === 6) {
-						break;
-					}
+
+							// 用于测试
+							/*if(i === 0) {
+								break;
+							}*/
+						}
+					}))
+					.catch((error) => {
+						console.log(error)
+					})
 				}
-			}
 		})
 		.catch((error) => {
 			console.log(error)
